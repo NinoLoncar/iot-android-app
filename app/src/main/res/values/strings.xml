@@ -3,4 +3,7 @@
     <string name="android_id">Android ID:</string>
     <string name="start_data_collecting">Pokreni prikupljanje\npodataka</string>
     <string name="test">test</string>
+    <string name="store_api_key">Unesite API ključ:</string>
+    <string name="api_key">API ključ</string>
+    <string name="add_api_key">Dodaj API ključ</string>
 </resources>
