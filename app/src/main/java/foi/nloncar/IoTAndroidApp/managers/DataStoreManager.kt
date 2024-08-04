@@ -14,14 +14,14 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class DataStoreManager(context: Context) {
 
     private val dataStore = context.dataStore
-    private val preferencesKey = stringPreferencesKey("API_KEY")
-    suspend fun updateApiKey(apiKey: String) {
+    private val preferencesKey = stringPreferencesKey("AUTHENTICATION_KEY")
+    suspend fun updateAuthenticationKey(apiKey: String) {
         dataStore.edit { preferences ->
             preferences[preferencesKey] = apiKey
         }
     }
 
-    fun getApiKey(): Flow<String?> {
+    fun getAuthenticationKey(): Flow<String?> {
         return dataStore.data.map { preferences ->
             preferences[preferencesKey]
         }

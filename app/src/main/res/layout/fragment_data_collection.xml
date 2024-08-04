@@ -46,13 +46,13 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
-        android:id="@+id/btn_store_api_key"
+        android:id="@+id/btn_store_authentication_key"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
         android:background="@color/colorPrimaryDark"
         android:padding="15dp"
-        android:text="@string/add_api_key"
+        android:text="@string/add_authentication_key"
         android:textAllCaps="false"
         android:textColor="@color/white"
         android:textSize="20sp"

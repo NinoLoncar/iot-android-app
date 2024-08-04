@@ -10,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingBottom="8dp"
-        android:text="@string/store_api_key"
+        android:text="@string/store_authentication_key"
         android:textSize="18sp"
         android:textStyle="bold" />
 
@@ -18,7 +18,7 @@
         android:id="@+id/dialogEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="@string/api_key"
+        android:hint="@string/authentication_key"
         android:importantForAutofill="no"
         android:inputType="text" />
 </LinearLayout>

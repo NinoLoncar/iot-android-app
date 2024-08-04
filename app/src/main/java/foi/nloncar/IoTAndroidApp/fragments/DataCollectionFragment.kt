@@ -42,28 +42,37 @@ class DataCollectionFragment : Fragment() {
         val androidIdTextView: TextView = view.findViewById(R.id.tv_android_id)
         androidIdTextView.text = DeviceUtils.getAndroidId(requireContext())
 
-        val btnStoreApiKey: Button = view.findViewById(R.id.btn_store_api_key)
-        btnStoreApiKey.setOnClickListener {
+        val btnStoreAuthenticationKey: Button = view.findViewById(R.id.btn_store_authentication_key)
+        btnStoreAuthenticationKey.setOnClickListener {
             showDialog()
         }
         val btnStartDataCollecting: Button = view.findViewById(R.id.btn_start_data_collecting)
         btnStartDataCollecting.setOnClickListener {
-            lifecycleScope.launch {
-                postData()
+            if (DeviceUtils.checkInternetConnection(requireContext())) {
+                lifecycleScope.launch {
+                    postData()
+                }
+            } else {
+                Toast.makeText(
+                    requireContext(),
+                    "Niste povezani na internet",
+                    Toast.LENGTH_SHORT
+                )
+                    .show()
             }
         }
 
     }
 
     private fun showDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_store_api_key, null)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_store_authentication_key, null)
         val builder = AlertDialog.Builder(requireContext())
         builder.setView(dialogView)
         builder.setPositiveButton("Spremi") { dialog, _ ->
             val editText: EditText = dialogView.findViewById(R.id.dialogEditText)
             val inputText = editText.text.toString()
             lifecycleScope.launch {
-                dataStoreManager.updateApiKey(inputText)
+                dataStoreManager.updateAuthenticationKey(inputText)
             }
             dialog.dismiss()
         }
@@ -76,11 +85,11 @@ class DataCollectionFragment : Fragment() {
 
     private suspend fun postData() {
         val ws = RetrofitClient.sensorDataService
-        val apiKey = dataStoreManager.getApiKey().first()
+        val authenticationKey = dataStoreManager.getAuthenticationKey().first()
 
         val sensorData = SensorData(DeviceUtils.getAndroidId(requireContext()))
 
-        ws.postSensorData(apiKey ?: "", sensorData).enqueue(
+        ws.postSensorData(authenticationKey ?: "", sensorData).enqueue(
             object : Callback<ServiceResponse> {
                 override fun onResponse(
                     call: Call<ServiceResponse>,
@@ -92,7 +101,7 @@ class DataCollectionFragment : Fragment() {
                         }
 
                         403 -> {
-                            "Uređaj nije registirian ili je API ključ pogrešan"
+                            "Uređaj nije registirian ili je autentifikacijski ključ pogrešan"
                         }
 
                         else -> {

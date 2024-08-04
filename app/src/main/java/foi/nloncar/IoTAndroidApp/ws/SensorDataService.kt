@@ -8,7 +8,7 @@ import retrofit2.http.POST
 interface SensorDataService {
     @POST("sensorData")
     fun postSensorData(
-        @Header("Api-Key") apiKey: String,
+        @Header("Authentication-Key") apiKey: String,
         @Body data: SensorData
     ): Call<ServiceResponse>
 }
