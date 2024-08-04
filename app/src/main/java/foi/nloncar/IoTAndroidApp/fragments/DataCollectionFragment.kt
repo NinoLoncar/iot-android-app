@@ -9,11 +9,16 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import foi.nloncar.IoTAndroidApp.R
+import foi.nloncar.IoTAndroidApp.managers.DataStoreManager
 import foi.nloncar.IoTAndroidApp.utilities.DeviceUtils
+import kotlinx.coroutines.launch
 
 
 class DataCollectionFragment : Fragment() {
+
+    private lateinit var dataStoreManager: DataStoreManager
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -23,6 +28,9 @@ class DataCollectionFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+
+        dataStoreManager = DataStoreManager(requireContext())
+
         val androidIdTextView: TextView = view.findViewById(R.id.tv_android_id)
         androidIdTextView.text = DeviceUtils.getAndroidId(requireContext())
 
@@ -39,6 +47,9 @@ class DataCollectionFragment : Fragment() {
         builder.setPositiveButton("Spremi") { dialog, _ ->
             val editText: EditText = dialogView.findViewById(R.id.dialogEditText)
             val inputText = editText.text.toString()
+            lifecycleScope.launch {
+                dataStoreManager.updateApiKey(inputText)
+            }
             dialog.dismiss()
         }
         builder.setNegativeButton("Odustani") { dialog, _ ->
