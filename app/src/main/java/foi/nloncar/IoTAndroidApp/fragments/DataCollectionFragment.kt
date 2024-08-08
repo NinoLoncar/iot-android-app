@@ -45,7 +45,7 @@ class DataCollectionFragment : Fragment() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     private var longitude: Double? = null
-    private var altitude: Double? = null
+    private var latitude: Double? = null
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -73,8 +73,9 @@ class DataCollectionFragment : Fragment() {
         btnStartDataCollecting.setOnClickListener {
             if (checkPrerequisitesForDataCollection()) {
                 fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+
                     longitude = location?.longitude
-                    altitude = location?.altitude
+                    latitude = location?.latitude
                     lifecycleScope.launch {
                         val sensorData = collectData()
                         postData(sensorData)
@@ -157,7 +158,7 @@ class DataCollectionFragment : Fragment() {
     private fun collectData(): SensorData {
         val androidId = DeviceInfoHelper.getAndroidId(requireContext())
         val time = getCurrentTime()
-        return SensorData(androidId, longitude, altitude, time)
+        return SensorData(androidId, longitude, latitude, time)
     }
 
     private suspend fun postData(sensorData: SensorData) {
