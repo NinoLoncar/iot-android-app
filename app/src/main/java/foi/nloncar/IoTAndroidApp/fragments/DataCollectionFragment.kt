@@ -33,6 +33,9 @@ import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 
 class DataCollectionFragment : Fragment() {
@@ -153,7 +156,8 @@ class DataCollectionFragment : Fragment() {
 
     private fun collectData(): SensorData {
         val androidId = DeviceInfoHelper.getAndroidId(requireContext())
-        return SensorData(androidId, longitude, altitude)
+        val time = getCurrentTime()
+        return SensorData(androidId, longitude, altitude, time)
     }
 
     private suspend fun postData(sensorData: SensorData) {
@@ -198,6 +202,14 @@ class DataCollectionFragment : Fragment() {
     private fun showShortToast(message: String) {
         Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT)
             .show()
+    }
+
+    private fun getCurrentTime(): String {
+        val currentTime = System.currentTimeMillis()
+        return SimpleDateFormat(
+            " HH:mm:ss dd.MM.yyyy",
+            Locale.getDefault()
+        ).format(Date(currentTime))
     }
 
 }
