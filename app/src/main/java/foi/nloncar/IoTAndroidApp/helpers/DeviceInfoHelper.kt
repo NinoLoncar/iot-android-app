@@ -1,10 +1,10 @@
-package foi.nloncar.IoTAndroidApp.utilities
+package foi.nloncar.IoTAndroidApp.helpers
 
 import android.content.Context
 import android.net.ConnectivityManager
 import android.provider.Settings
 
-object DeviceUtils {
+object DeviceInfoHelper {
     fun getAndroidId(context: Context): String {
         return Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
     }
