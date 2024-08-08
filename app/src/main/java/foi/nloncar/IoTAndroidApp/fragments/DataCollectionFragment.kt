@@ -72,16 +72,13 @@ class DataCollectionFragment : Fragment() {
                 fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
                     longitude = location?.longitude
                     altitude = location?.altitude
-                }
-                lifecycleScope.launch {
-                    val sensorData = collectData()
-                    postData(sensorData)
+                    lifecycleScope.launch {
+                        val sensorData = collectData()
+                        postData(sensorData)
+                    }
                 }
             }
-
         }
-
-
     }
 
     private fun checkPrerequisitesForDataCollection(): Boolean {
