@@ -1,7 +1,13 @@
 package foi.nloncar.IoTAndroidApp.fragments
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.content.Intent
+import android.location.Location
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,11 +15,16 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import foi.nloncar.IoTAndroidApp.R
+import foi.nloncar.IoTAndroidApp.helpers.DeviceInfoHelper
+import foi.nloncar.IoTAndroidApp.helpers.LocationHelper
 import foi.nloncar.IoTAndroidApp.managers.DataStoreManager
-import foi.nloncar.IoTAndroidApp.utilities.DeviceUtils
 import foi.nloncar.IoTAndroidApp.ws.RetrofitClient
 import foi.nloncar.IoTAndroidApp.ws.SensorData
 import foi.nloncar.IoTAndroidApp.ws.ServiceResponse
@@ -27,44 +38,104 @@ import retrofit2.Response
 class DataCollectionFragment : Fragment() {
 
     private lateinit var dataStoreManager: DataStoreManager
+    private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+
+    private var longitude: Double? = null
+    private var altitude: Double? = null
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
+        setupRequestPermissionLauncher()
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
+
         return inflater.inflate(R.layout.fragment_data_collection, container, false)
     }
 
+
+    @SuppressLint("MissingPermission")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 
         dataStoreManager = DataStoreManager(requireContext())
 
         val androidIdTextView: TextView = view.findViewById(R.id.tv_android_id)
-        androidIdTextView.text = DeviceUtils.getAndroidId(requireContext())
+        androidIdTextView.text = DeviceInfoHelper.getAndroidId(requireContext())
 
         val btnStoreAuthenticationKey: Button = view.findViewById(R.id.btn_store_authentication_key)
         btnStoreAuthenticationKey.setOnClickListener {
-            showDialog()
+            showAuthenticationKeySavingDialog()
         }
         val btnStartDataCollecting: Button = view.findViewById(R.id.btn_start_data_collecting)
         btnStartDataCollecting.setOnClickListener {
-            if (DeviceUtils.checkInternetConnection(requireContext())) {
-                lifecycleScope.launch {
-                    postData()
+            if (checkPrerequisitesForDataCollection()) {
+                fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+                    longitude = location?.longitude
+                    altitude = location?.altitude
                 }
-            } else {
-                Toast.makeText(
-                    requireContext(),
-                    "Niste povezani na internet",
-                    Toast.LENGTH_SHORT
-                )
-                    .show()
+                lifecycleScope.launch {
+                    val sensorData = collectData()
+                    postData(sensorData)
+                }
             }
+
         }
+
 
     }
 
-    private fun showDialog() {
+    private fun checkPrerequisitesForDataCollection(): Boolean {
+        if (!DeviceInfoHelper.checkInternetConnection(requireContext())) {
+            showShortToast("Niste povezani na internet")
+            return false
+        }
+        if (!LocationHelper.checkLocationPermission(requireContext())) {
+            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            return false
+        }
+        if (!LocationHelper.isLocationEnabled(requireContext())) {
+            showLocationDisabledDialog()
+            return false
+        }
+        return true
+    }
+
+    private fun setupRequestPermissionLauncher() {
+        requestPermissionLauncher = registerForActivityResult(
+            RequestPermission()
+        ) { isGranted: Boolean ->
+            if (isGranted) {
+                Toast.makeText(requireContext(), "Dozvola odobrena", Toast.LENGTH_SHORT).show()
+            } else {
+                showLocationRequiredDialog()
+            }
+        }
+    }
+
+    private fun showLocationDisabledDialog() {
+        val builder = AlertDialog.Builder(requireContext())
+        builder.setTitle("Lokacija")
+            .setMessage("Za prikupljanje podatka, uključite lokaciju.")
+            .setPositiveButton("U redu") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun showLocationRequiredDialog() {
+        val builder = AlertDialog.Builder(requireContext())
+        builder.setTitle("Lokacija")
+            .setMessage("Za prikupljanje podatka potrebna je lokacija uređaja.")
+            .setPositiveButton("Idi na postavke") { _, _ ->
+                openAppSettings()
+            }
+            .setNegativeButton("Odustani") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun showAuthenticationKeySavingDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_store_authentication_key, null)
         val builder = AlertDialog.Builder(requireContext())
         builder.setView(dialogView)
@@ -83,11 +154,14 @@ class DataCollectionFragment : Fragment() {
         dialog.show()
     }
 
-    private suspend fun postData() {
+    private fun collectData(): SensorData {
+        val androidId = DeviceInfoHelper.getAndroidId(requireContext())
+        return SensorData(androidId, longitude, altitude)
+    }
+
+    private suspend fun postData(sensorData: SensorData) {
         val ws = RetrofitClient.sensorDataService
         val authenticationKey = dataStoreManager.getAuthenticationKey().first()
-
-        val sensorData = SensorData(DeviceUtils.getAndroidId(requireContext()))
 
         ws.postSensorData(authenticationKey ?: "", sensorData).enqueue(
             object : Callback<ServiceResponse> {
@@ -108,19 +182,26 @@ class DataCollectionFragment : Fragment() {
                             "Dogodila se greška"
                         }
                     }
-                    Toast.makeText(
-                        requireContext(),
-                        message,
-                        Toast.LENGTH_SHORT
-                    )
-                        .show()
+                    showShortToast(message)
                 }
 
                 override fun onFailure(call: Call<ServiceResponse>, t: Throwable) {
-                    Toast.makeText(requireContext(), "Dogodila se greška", Toast.LENGTH_SHORT)
-                        .show()
+                    showShortToast("Dogodila se greška")
                 }
             })
     }
+
+    private fun openAppSettings() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+        val uri = Uri.fromParts("package", requireContext().packageName, null)
+        intent.data = uri
+        startActivity(intent)
+    }
+
+    private fun showShortToast(message: String) {
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT)
+            .show()
+    }
+
 }
 
