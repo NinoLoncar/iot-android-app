@@ -4,7 +4,6 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Intent
-import android.location.Location
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -20,7 +19,11 @@ import androidx.activity.result.contract.ActivityResultContracts.RequestPermissi
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import foi.nloncar.IoTAndroidApp.R
 import foi.nloncar.IoTAndroidApp.helpers.DeviceInfoHelper
 import foi.nloncar.IoTAndroidApp.helpers.LocationHelper
@@ -28,6 +31,7 @@ import foi.nloncar.IoTAndroidApp.managers.DataStoreManager
 import foi.nloncar.IoTAndroidApp.ws.RetrofitClient
 import foi.nloncar.IoTAndroidApp.ws.SensorData
 import foi.nloncar.IoTAndroidApp.ws.ServiceResponse
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import retrofit2.Call
@@ -43,6 +47,8 @@ class DataCollectionFragment : Fragment() {
     private lateinit var dataStoreManager: DataStoreManager
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<String>
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var locationRequest: LocationRequest
+    private lateinit var locationCallback: LocationCallback
 
     private var longitude: Double? = null
     private var latitude: Double? = null
@@ -53,9 +59,23 @@ class DataCollectionFragment : Fragment() {
         setupRequestPermissionLauncher()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
+        locationRequest = LocationRequest.Builder(10000)
+            .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
+            .setMinUpdateIntervalMillis(5000)
+            .build()
+
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(p0: LocationResult) {
+                p0 ?: return
+                for (location in p0.locations) {
+                    longitude = location.longitude
+                    latitude = location.latitude
+                }
+            }
+        }
+
         return inflater.inflate(R.layout.fragment_data_collection, container, false)
     }
-
 
     @SuppressLint("MissingPermission")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -72,11 +92,10 @@ class DataCollectionFragment : Fragment() {
         val btnStartDataCollecting: Button = view.findViewById(R.id.btn_start_data_collecting)
         btnStartDataCollecting.setOnClickListener {
             if (checkPrerequisitesForDataCollection()) {
-                fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
-
-                    longitude = location?.longitude
-                    latitude = location?.latitude
-                    lifecycleScope.launch {
+                fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null)
+                lifecycleScope.launch {
+                    while (true) {
+                        delay(10000)
                         val sensorData = collectData()
                         postData(sensorData)
                     }
