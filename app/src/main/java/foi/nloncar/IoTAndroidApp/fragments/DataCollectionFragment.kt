@@ -3,7 +3,12 @@ package foi.nloncar.IoTAndroidApp.fragments
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -46,7 +51,7 @@ import java.util.Date
 import java.util.Locale
 
 
-class DataCollectionFragment : Fragment() {
+class DataCollectionFragment : Fragment(), SensorEventListener {
 
     private lateinit var loadingCircle: ProgressBar
     private lateinit var tvNumberOfDataTransfersDesc: TextView
@@ -64,20 +69,33 @@ class DataCollectionFragment : Fragment() {
     private lateinit var locationCallback: LocationCallback
     private var dataCollectionJob: Job? = null
 
+    private lateinit var sensorManager: SensorManager
+    private var stepDetector: Sensor? = null
+
     private var longitude: Double? = null
     private var latitude: Double? = null
     private var dataCollectionInProgress: Boolean = false
+    private var stepCount: Int = 0
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
+
+        dataStoreManager = DataStoreManager(requireContext())
+        lifecycleScope.launch {
+            val storedStepCount = dataStoreManager.getStepCount().first()
+            if (storedStepCount != null) {
+                stepCount = storedStepCount.toInt()
+            }
+        }
+
+
         setupRequestPermissionLauncher()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
-        locationRequest = LocationRequest.Builder(10000)
+        locationRequest = LocationRequest.Builder(5000)
             .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
-            .setMinUpdateIntervalMillis(5000)
             .build()
 
         locationCallback = object : LocationCallback() {
@@ -89,6 +107,8 @@ class DataCollectionFragment : Fragment() {
                 }
             }
         }
+        sensorManager = requireContext().getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        stepDetector = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
 
         return inflater.inflate(R.layout.fragment_data_collection, container, false)
     }
@@ -105,8 +125,6 @@ class DataCollectionFragment : Fragment() {
         btnStoreAuthenticationKey = view.findViewById(R.id.btn_store_authentication_key)
         btnStartDataCollecting = view.findViewById(R.id.btn_start_data_collection)
 
-        dataStoreManager = DataStoreManager(requireContext())
-
         tvAndroidId.text = DeviceInfoHelper.getAndroidId(requireContext())
 
         btnStoreAuthenticationKey.setOnClickListener {
@@ -118,10 +136,11 @@ class DataCollectionFragment : Fragment() {
                 dataCollectionInProgress = true
                 changeDisplay()
                 fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null)
+                registerSensorListeners()
                 dataCollectionJob = lifecycleScope.launch {
                     var numberOfDataTransfers = 0
                     tvNumberOfDataTransfers.text = "0"
-                    delay(2000)
+                    delay(10000)
                     while (dataCollectionInProgress) {
                         val sensorData = collectData()
                         val success = postData(sensorData)
@@ -158,6 +177,10 @@ class DataCollectionFragment : Fragment() {
             showLocationDisabledDialog()
             return false
         }
+        if (!DeviceInfoHelper.checkActivityPermission(requireContext())) {
+            requestPermissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+            return false
+        }
         return true
     }
 
@@ -166,9 +189,13 @@ class DataCollectionFragment : Fragment() {
             RequestPermission()
         ) { isGranted: Boolean ->
             if (isGranted) {
-                Toast.makeText(requireContext(), "Dozvola odobrena", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    requireContext(),
+                    "Možete započeti s prikupljanjem podataka",
+                    Toast.LENGTH_SHORT
+                ).show()
             } else {
-                showLocationRequiredDialog()
+                showRequiredPermissionsDialog()
             }
         }
     }
@@ -176,17 +203,17 @@ class DataCollectionFragment : Fragment() {
     private fun showLocationDisabledDialog() {
         val builder = AlertDialog.Builder(requireContext())
         builder.setTitle("Lokacija")
-            .setMessage("Za prikupljanje podatka, uključite lokaciju.")
+            .setMessage("Za prikupljanje podataka, uključite lokaciju.")
             .setPositiveButton("U redu") { dialog, _ ->
                 dialog.dismiss()
             }
             .show()
     }
 
-    private fun showLocationRequiredDialog() {
+    private fun showRequiredPermissionsDialog() {
         val builder = AlertDialog.Builder(requireContext())
-        builder.setTitle("Lokacija")
-            .setMessage("Za prikupljanje podatka potrebna je lokacija uređaja.")
+        builder.setTitle("Lokacija i praćenje aktivnosti")
+            .setMessage("Za prikupljanje podataka, potrebna je dozvola za praćenje tjelesne aktivnosti i lokacije uređaja.")
             .setPositiveButton("Idi na postavke") { _, _ ->
                 openAppSettings()
             }
@@ -218,7 +245,7 @@ class DataCollectionFragment : Fragment() {
     private fun collectData(): SensorData {
         val androidId = DeviceInfoHelper.getAndroidId(requireContext())
         val time = getCurrentTime()
-        return SensorData(androidId, longitude, latitude, time)
+        return SensorData(androidId, longitude, latitude, stepCount, time)
     }
 
     private suspend fun postData(sensorData: SensorData): Boolean {
@@ -291,6 +318,31 @@ class DataCollectionFragment : Fragment() {
         tvAndroidIdDesc.isVisible = !dataCollectionInProgress
         btnStoreAuthenticationKey.isVisible = !dataCollectionInProgress
         btnStartDataCollecting.isVisible = !dataCollectionInProgress
+    }
+
+    private fun registerSensorListeners() {
+        if (stepDetector != null) {
+            sensorManager.registerListener(
+                this,
+                stepDetector,
+                SensorManager.SENSOR_DELAY_NORMAL
+            )
+
+        }
+    }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event != null) {
+            if (event.sensor.type == Sensor.TYPE_STEP_DETECTOR) {
+                stepCount++
+                lifecycleScope.launch {
+                    dataStoreManager.updateStepCount(stepCount)
+                }
+            }
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
     }
 
 }

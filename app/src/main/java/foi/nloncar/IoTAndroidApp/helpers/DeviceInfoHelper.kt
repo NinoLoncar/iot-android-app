@@ -1,8 +1,11 @@
 package foi.nloncar.IoTAndroidApp.helpers
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.provider.Settings
+import androidx.core.app.ActivityCompat
 
 object DeviceInfoHelper {
     fun getAndroidId(context: Context): String {
@@ -19,4 +22,12 @@ object DeviceInfoHelper {
         }
         return false
     }
+
+    fun checkActivityPermission(context: Context): Boolean {
+        return ActivityCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACTIVITY_RECOGNITION
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
 }

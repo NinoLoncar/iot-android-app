@@ -14,16 +14,31 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class DataStoreManager(context: Context) {
 
     private val dataStore = context.dataStore
-    private val preferencesKey = stringPreferencesKey("AUTHENTICATION_KEY")
+    private val authenticationPreferencesKey = stringPreferencesKey("AUTHENTICATION_KEY")
+    private val stepCountPreferencesKey = stringPreferencesKey("STEP_COUNT")
     suspend fun updateAuthenticationKey(apiKey: String) {
         dataStore.edit { preferences ->
-            preferences[preferencesKey] = apiKey
+            preferences[authenticationPreferencesKey] = apiKey
         }
     }
 
     fun getAuthenticationKey(): Flow<String?> {
         return dataStore.data.map { preferences ->
-            preferences[preferencesKey]
+            preferences[authenticationPreferencesKey]
         }
     }
+
+    suspend fun updateStepCount(stepCount: Int) {
+        dataStore.edit { preferences ->
+            preferences[stepCountPreferencesKey] = stepCount.toString()
+        }
+    }
+
+    fun getStepCount(): Flow<String?> {
+        return dataStore.data.map { preferences ->
+            preferences[stepCountPreferencesKey]
+        }
+    }
+
+
 }

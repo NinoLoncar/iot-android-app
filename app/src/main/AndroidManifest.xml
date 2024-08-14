@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -24,7 +26,7 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.IoTAndroidApp"
             android:windowSoftInputMode="adjustPan">
-            
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

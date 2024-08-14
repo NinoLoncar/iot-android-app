@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "foi.nloncar.IoTAndroidApp"
-        minSdk = 24
+        minSdk = 29
         targetSdk = 33
         versionCode = 1
         versionName = "1.0"
