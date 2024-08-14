@@ -94,7 +94,6 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
             }
         }
 
-
         setupRequestPermissionLauncher()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
@@ -118,17 +117,9 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
         return inflater.inflate(R.layout.fragment_data_collection, container, false)
     }
 
-    @SuppressLint("MissingPermission")
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 
-        loadingCircle = view.findViewById(R.id.pb_data_collection_in_progress)
-        tvNumberOfDataTransfersDesc = view.findViewById(R.id.tv_number_of_data_transfers_desc)
-        tvNumberOfDataTransfers = view.findViewById(R.id.tv_number_of_data_transfers)
-        tvAndroidId = view.findViewById(R.id.tv_android_id)
-        tvAndroidIdDesc = view.findViewById(R.id.tv_android_id_desc)
-        btnStopDataCollection = view.findViewById(R.id.btn_stop_data_collection)
-        btnStoreAuthenticationKey = view.findViewById(R.id.btn_store_authentication_key)
-        btnStartDataCollecting = view.findViewById(R.id.btn_start_data_collection)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        initializeUiComponents(view)
 
         tvAndroidId.text = DeviceInfoHelper.getAndroidId(requireContext())
 
@@ -138,26 +129,8 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
 
         btnStartDataCollecting.setOnClickListener {
             if (checkPrerequisitesForDataCollection()) {
-                dataCollectionInProgress = true
                 changeDisplay()
-                fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null)
-                registerSensorListeners()
-                dataCollectionJob = lifecycleScope.launch {
-                    var numberOfDataTransfers = 0
-                    tvNumberOfDataTransfers.text = "0"
-                    delay(10000)
-                    while (dataCollectionInProgress) {
-                        val sensorData = collectData()
-                        val success = postData(sensorData)
-                        if (success) {
-                            numberOfDataTransfers++
-                            tvNumberOfDataTransfers.text = numberOfDataTransfers.toString()
-                            delay(10000)
-                        } else
-                            dataCollectionInProgress = false
-                    }
-                    changeDisplay()
-                }
+                startDataCollection()
             }
         }
 
@@ -166,7 +139,33 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
             dataCollectionInProgress = false
             changeDisplay()
         }
+    }
 
+    private fun setupRequestPermissionLauncher() {
+        requestPermissionLauncher = registerForActivityResult(
+            RequestPermission()
+        ) { isGranted: Boolean ->
+            if (isGranted) {
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.ready_for_data_collecting),
+                    Toast.LENGTH_SHORT
+                ).show()
+            } else {
+                showRequiredPermissionsDialog()
+            }
+        }
+    }
+
+    private fun initializeUiComponents(view: View) {
+        loadingCircle = view.findViewById(R.id.pb_data_collection_in_progress)
+        tvNumberOfDataTransfersDesc = view.findViewById(R.id.tv_number_of_data_transfers_desc)
+        tvNumberOfDataTransfers = view.findViewById(R.id.tv_number_of_data_transfers)
+        tvAndroidId = view.findViewById(R.id.tv_android_id)
+        tvAndroidIdDesc = view.findViewById(R.id.tv_android_id_desc)
+        btnStopDataCollection = view.findViewById(R.id.btn_stop_data_collection)
+        btnStoreAuthenticationKey = view.findViewById(R.id.btn_store_authentication_key)
+        btnStartDataCollecting = view.findViewById(R.id.btn_start_data_collection)
     }
 
     private fun checkPrerequisitesForDataCollection(): Boolean {
@@ -189,62 +188,31 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
         return true
     }
 
-    private fun setupRequestPermissionLauncher() {
-        requestPermissionLauncher = registerForActivityResult(
-            RequestPermission()
-        ) { isGranted: Boolean ->
-            if (isGranted) {
-                Toast.makeText(
-                    requireContext(),
-                    getString(R.string.ready_for_data_collecting),
-                    Toast.LENGTH_SHORT
-                ).show()
-            } else {
-                showRequiredPermissionsDialog()
-            }
+    @SuppressLint("MissingPermission")
+    private fun startDataCollection() {
+        dataCollectionInProgress = true
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null)
+        registerSensorListeners()
+        dataCollectionJob = lifecycleScope.launch {
+            runDataCollectionLoop()
         }
     }
 
-    private fun showLocationDisabledDialog() {
-        val builder = AlertDialog.Builder(requireContext())
-        builder.setTitle(getString(R.string.location))
-            .setMessage(getString(R.string.enable_location))
-            .setPositiveButton(getString(R.string.ok)) { dialog, _ ->
-                dialog.dismiss()
-            }
-            .show()
-    }
-
-    private fun showRequiredPermissionsDialog() {
-        val builder = AlertDialog.Builder(requireContext())
-        builder.setTitle(getString(R.string.location_and_activtiy_tracking))
-            .setMessage(getString(R.string.required_permissions))
-            .setPositiveButton(getString(R.string.go_to_settings)) { _, _ ->
-                openAppSettings()
-            }
-            .setNegativeButton(getString(R.string.cancel)) { dialog, _ ->
-                dialog.dismiss()
-            }
-            .show()
-    }
-
-    private fun showAuthenticationKeySavingDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_store_authentication_key, null)
-        val builder = AlertDialog.Builder(requireContext())
-        builder.setView(dialogView)
-        builder.setPositiveButton(getString(R.string.save)) { dialog, _ ->
-            val editText: EditText = dialogView.findViewById(R.id.dialogEditText)
-            val inputText = editText.text.toString()
-            lifecycleScope.launch {
-                dataStoreManager.updateAuthenticationKey(inputText)
-            }
-            dialog.dismiss()
+    private suspend fun runDataCollectionLoop() {
+        var numberOfDataTransfers = 0
+        tvNumberOfDataTransfers.text = "0"
+        delay(10000)
+        while (dataCollectionInProgress) {
+            val sensorData = collectData()
+            val success = postData(sensorData)
+            if (success) {
+                numberOfDataTransfers++
+                tvNumberOfDataTransfers.text = numberOfDataTransfers.toString()
+                delay(10000)
+            } else
+                dataCollectionInProgress = false
         }
-        builder.setNegativeButton(getString(R.string.cancel)) { dialog, _ ->
-            dialog.dismiss()
-        }
-        val dialog = builder.create()
-        dialog.show()
+        changeDisplay()
     }
 
     private fun collectData(): SensorData {
@@ -282,7 +250,6 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
                         403 -> {
                             success = false
                             showShortToast(getString(R.string.failed_authentication))
-
                         }
 
                         else -> {
@@ -290,7 +257,6 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
                             showShortToast(getString(R.string.error))
                         }
                     }
-
                     deferred.complete(success)
                 }
 
@@ -300,6 +266,50 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
                 }
             })
         return deferred.await()
+    }
+
+    private fun showLocationDisabledDialog() {
+        val builder = AlertDialog.Builder(requireContext())
+        builder.setTitle(getString(R.string.location))
+            .setMessage(getString(R.string.enable_location))
+            .setPositiveButton(getString(R.string.ok)) { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun showRequiredPermissionsDialog() {
+        val builder = AlertDialog.Builder(requireContext())
+        builder.setTitle(getString(R.string.location_and_activtiy_tracking))
+            .setMessage(getString(R.string.required_permissions))
+            .setPositiveButton(getString(R.string.go_to_settings)) { _, _ ->
+                openAppSettings()
+            }
+            .setNegativeButton(getString(R.string.cancel)) { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun showAuthenticationKeySavingDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_store_authentication_key, null)
+        val builder = AlertDialog.Builder(requireContext())
+
+        builder.setView(dialogView)
+        builder.setPositiveButton(getString(R.string.save)) { dialog, _ ->
+            val editText: EditText = dialogView.findViewById(R.id.dialogEditText)
+            val inputText = editText.text.toString()
+            lifecycleScope.launch {
+                dataStoreManager.updateAuthenticationKey(inputText)
+            }
+            dialog.dismiss()
+        }
+        builder.setNegativeButton(getString(R.string.cancel)) { dialog, _ ->
+            dialog.dismiss()
+        }
+
+        val dialog = builder.create()
+        dialog.show()
     }
 
     private fun openAppSettings() {
@@ -368,6 +378,11 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+    }
+
+    override fun onPause() {
+        sensorManager.unregisterListener(this)
+        super.onPause()
     }
 
 }
