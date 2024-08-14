@@ -71,11 +71,15 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
 
     private lateinit var sensorManager: SensorManager
     private var stepDetector: Sensor? = null
+    private var accelerometer: Sensor? = null
 
     private var longitude: Double? = null
     private var latitude: Double? = null
     private var dataCollectionInProgress: Boolean = false
     private var stepCount: Int = 0
+    private var accelerationX: Float = 0f
+    private var accelerationY: Float = 0f
+    private var accelerationZ: Float = 0f
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -109,6 +113,7 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
         }
         sensorManager = requireContext().getSystemService(Context.SENSOR_SERVICE) as SensorManager
         stepDetector = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
+        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
 
         return inflater.inflate(R.layout.fragment_data_collection, container, false)
     }
@@ -245,7 +250,16 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
     private fun collectData(): SensorData {
         val androidId = DeviceInfoHelper.getAndroidId(requireContext())
         val time = getCurrentTime()
-        return SensorData(androidId, longitude, latitude, stepCount, time)
+        return SensorData(
+            androidId,
+            longitude,
+            latitude,
+            stepCount,
+            accelerationX,
+            accelerationY,
+            accelerationZ,
+            time
+        )
     }
 
     private suspend fun postData(sensorData: SensorData): Boolean {
@@ -327,7 +341,13 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
                 stepDetector,
                 SensorManager.SENSOR_DELAY_NORMAL
             )
-
+        }
+        if (accelerometer != null) {
+            sensorManager.registerListener(
+                this,
+                accelerometer,
+                SensorManager.SENSOR_DELAY_NORMAL
+            )
         }
     }
 
@@ -338,6 +358,11 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
                 lifecycleScope.launch {
                     dataStoreManager.updateStepCount(stepCount)
                 }
+            }
+            if (event.sensor.type == Sensor.TYPE_LINEAR_ACCELERATION) {
+                accelerationX = event.values[0]
+                accelerationY = event.values[1]
+                accelerationZ = event.values[2]
             }
         }
     }

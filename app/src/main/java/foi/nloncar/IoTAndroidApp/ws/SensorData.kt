@@ -5,5 +5,8 @@ data class SensorData(
     val longitude: Double?,
     val latitude: Double?,
     val stepCount: Int,
+    val accelerationX: Float,
+    val accelerationY: Float,
+    val accelerationZ: Float,
     val time: String
 )
