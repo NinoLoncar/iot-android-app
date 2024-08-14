@@ -8,4 +8,16 @@
     <string name="add_authentication_key">Dodaj autentifikacijski ključ</string>
     <string name="number_of_data_transfers">Broj prijenosa podataka:</string>
     <string name="Stop">Zaustavi</string>
+    <string name="no_internet_connection">Niste povezani na internet</string>
+    <string name="ready_for_data_collecting">Možete započeti s prikupljanjem podataka</string>
+    <string name="location">Lokacija</string>
+    <string name="enable_location">Za prikupljanje podataka, uključite lokaciju.</string>
+    <string name="ok">U redu</string>
+    <string name="location_and_activtiy_tracking">Lokacija i praćenje aktivnosti</string>
+    <string name="required_permissions">Za prikupljanje podataka, potrebna je dozvola za praćenje tjelesne aktivnosti i lokacije uređaja.</string>
+    <string name="go_to_settings">Idi na postavke</string>
+    <string name="cancel">Odustani</string>
+    <string name="save">Spremi</string>
+    <string name="error">Dogodila se greška</string>
+    <string name="failed_authentication">Uređaj nije registirian ili je autentifikacijski ključ pogrešan</string>
 </resources>

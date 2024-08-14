@@ -171,7 +171,7 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
 
     private fun checkPrerequisitesForDataCollection(): Boolean {
         if (!DeviceInfoHelper.checkInternetConnection(requireContext())) {
-            showShortToast("Niste povezani na internet")
+            showShortToast(getString(R.string.no_internet_connection))
             return false
         }
         if (!LocationHelper.checkLocationPermission(requireContext())) {
@@ -196,7 +196,7 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
             if (isGranted) {
                 Toast.makeText(
                     requireContext(),
-                    "Možete započeti s prikupljanjem podataka",
+                    getString(R.string.ready_for_data_collecting),
                     Toast.LENGTH_SHORT
                 ).show()
             } else {
@@ -207,9 +207,9 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
 
     private fun showLocationDisabledDialog() {
         val builder = AlertDialog.Builder(requireContext())
-        builder.setTitle("Lokacija")
-            .setMessage("Za prikupljanje podataka, uključite lokaciju.")
-            .setPositiveButton("U redu") { dialog, _ ->
+        builder.setTitle(getString(R.string.location))
+            .setMessage(getString(R.string.enable_location))
+            .setPositiveButton(getString(R.string.ok)) { dialog, _ ->
                 dialog.dismiss()
             }
             .show()
@@ -217,12 +217,12 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
 
     private fun showRequiredPermissionsDialog() {
         val builder = AlertDialog.Builder(requireContext())
-        builder.setTitle("Lokacija i praćenje aktivnosti")
-            .setMessage("Za prikupljanje podataka, potrebna je dozvola za praćenje tjelesne aktivnosti i lokacije uređaja.")
-            .setPositiveButton("Idi na postavke") { _, _ ->
+        builder.setTitle(getString(R.string.location_and_activtiy_tracking))
+            .setMessage(getString(R.string.required_permissions))
+            .setPositiveButton(getString(R.string.go_to_settings)) { _, _ ->
                 openAppSettings()
             }
-            .setNegativeButton("Odustani") { dialog, _ ->
+            .setNegativeButton(getString(R.string.cancel)) { dialog, _ ->
                 dialog.dismiss()
             }
             .show()
@@ -232,7 +232,7 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
         val dialogView = layoutInflater.inflate(R.layout.dialog_store_authentication_key, null)
         val builder = AlertDialog.Builder(requireContext())
         builder.setView(dialogView)
-        builder.setPositiveButton("Spremi") { dialog, _ ->
+        builder.setPositiveButton(getString(R.string.save)) { dialog, _ ->
             val editText: EditText = dialogView.findViewById(R.id.dialogEditText)
             val inputText = editText.text.toString()
             lifecycleScope.launch {
@@ -240,7 +240,7 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
             }
             dialog.dismiss()
         }
-        builder.setNegativeButton("Odustani") { dialog, _ ->
+        builder.setNegativeButton(getString(R.string.cancel)) { dialog, _ ->
             dialog.dismiss()
         }
         val dialog = builder.create()
@@ -281,13 +281,13 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
 
                         403 -> {
                             success = false
-                            showShortToast("Uređaj nije registirian ili je autentifikacijski ključ pogrešan")
+                            showShortToast(getString(R.string.failed_authentication))
 
                         }
 
                         else -> {
                             success = false
-                            showShortToast("Dogodila se greška")
+                            showShortToast(getString(R.string.error))
                         }
                     }
 
@@ -295,7 +295,7 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
                 }
 
                 override fun onFailure(call: Call<ServiceResponse>, t: Throwable) {
-                    showShortToast("Dogodila se greška")
+                    showShortToast(getString(R.string.error))
                     deferred.complete(false)
                 }
             })
