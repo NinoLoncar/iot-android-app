@@ -129,6 +129,7 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
 
         btnStartDataCollecting.setOnClickListener {
             if (checkPrerequisitesForDataCollection()) {
+                dataCollectionInProgress = true
                 changeDisplay()
                 startDataCollection()
             }
@@ -190,7 +191,6 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
 
     @SuppressLint("MissingPermission")
     private fun startDataCollection() {
-        dataCollectionInProgress = true
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null)
         registerSensorListeners()
         dataCollectionJob = lifecycleScope.launch {
