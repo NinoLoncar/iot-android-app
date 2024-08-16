@@ -1,6 +1,7 @@
 package foi.nloncar.IoTAndroidApp
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
@@ -16,6 +17,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         viewPager = findViewById(R.id.viewPager)
         tabLayout = findViewById(R.id.tabs)
@@ -38,6 +41,12 @@ class MainActivity : AppCompatActivity() {
             tab.setIcon(adapter.fragmentList[position].icon)
         }.attach()
     }
+
+    override fun onPause() {
+        super.onPause()
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
+
 }
 
 
