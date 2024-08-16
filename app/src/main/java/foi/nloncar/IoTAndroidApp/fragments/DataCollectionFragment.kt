@@ -327,7 +327,7 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
     private fun getCurrentTime(): String {
         val currentTime = System.currentTimeMillis()
         return SimpleDateFormat(
-            " HH:mm:ss dd.MM.yyyy",
+            "HH:mm:ss dd.MM.yyyy",
             Locale.getDefault()
         ).format(Date(currentTime))
     }
