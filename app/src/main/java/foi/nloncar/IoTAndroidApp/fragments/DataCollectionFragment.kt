@@ -171,7 +171,7 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
 
     private fun checkPrerequisitesForDataCollection(): Boolean {
         if (!DeviceInfoHelper.checkInternetConnection(requireContext())) {
-            showShortToast(getString(R.string.no_internet_connection))
+            showLongToast(getString(R.string.no_internet_connection))
             return false
         }
         if (!LocationHelper.checkLocationPermission(requireContext())) {
@@ -249,19 +249,19 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
 
                         403 -> {
                             success = false
-                            showShortToast(getString(R.string.failed_authentication))
+                            showLongToast(getString(R.string.failed_authentication))
                         }
 
                         else -> {
                             success = false
-                            showShortToast(getString(R.string.error))
+                            showLongToast(getString(R.string.error))
                         }
                     }
                     deferred.complete(success)
                 }
 
                 override fun onFailure(call: Call<ServiceResponse>, t: Throwable) {
-                    showShortToast(getString(R.string.error))
+                    showLongToast(getString(R.string.error))
                     deferred.complete(false)
                 }
             })
@@ -319,8 +319,8 @@ class DataCollectionFragment : Fragment(), SensorEventListener {
         startActivity(intent)
     }
 
-    private fun showShortToast(message: String) {
-        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT)
+    private fun showLongToast(message: String) {
+        Toast.makeText(requireContext(), message, Toast.LENGTH_LONG)
             .show()
     }
 
